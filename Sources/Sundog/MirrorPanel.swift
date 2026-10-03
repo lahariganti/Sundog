@@ -1,7 +1,7 @@
 import AppKit
 
-/// A small floating window that stays above other apps, including full-screen slides.
-/// It never takes focus, so the presenter's slides or editor stay active.
+/// A small floating window. It remains above other apps, including full-screen slides.
+/// Because it never takes focus, the slides or the code editor of the presenter remain active.
 @MainActor
 final class MirrorPanel: NSPanel {
     let mirrorView = MirrorView()
@@ -36,15 +36,15 @@ final class MirrorPanel: NSPanel {
         setFrameAutosaveName("SundogMirror")
     }
 
-    /// Shows the close and minimize buttons only while the pointer is over the window,
-    /// so the audience sees a clean window.
+    /// Shows the close and minimize buttons only while the pointer is over the window.
+    /// At all other times, the audience sees no buttons.
     private func showWindowButtons(_ visible: Bool) {
         for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton] {
             standardWindowButton(button)?.animator().alphaValue = visible ? 1 : 0
         }
     }
 
-    /// Matches the window shape to the phone screen and keeps its area and center.
+    /// Changes the window shape to the shape of the iPhone screen. The window keeps its area and its center.
     func fit(videoSize: CGSize) {
         guard videoSize.width > 0, videoSize.height > 0 else { return }
         let ratio = videoSize.width / videoSize.height

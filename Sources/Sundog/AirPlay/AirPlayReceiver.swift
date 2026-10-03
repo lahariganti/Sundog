@@ -2,7 +2,7 @@ import Foundation
 import Network
 import dnssd
 
-/// An AirPlay screen mirroring receiver. iPhones on the same network see it in Screen Mirroring.
+/// A receiver for AirPlay screen mirroring. iPhones on the same network show it in Screen Mirroring.
 final class AirPlayReceiver: @unchecked Sendable {
     enum Event: Sendable {
         case waiting

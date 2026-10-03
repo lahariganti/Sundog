@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Sundog
 
-/// The mirror stream fails silently with wrong video if the key stream is wrong or loses its position.
+/// If the key stream is incorrect or loses its position, the mirror stream shows incorrect video and gives no error.
 struct AESCTRTests {
     // NIST SP 800-38A, F.5.1 CTR-AES128.Encrypt
     let key = Data(hex: "2b7e151628aed2a6abf7158809cf4f3c")

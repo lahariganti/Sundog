@@ -1,10 +1,10 @@
 import AVFoundation
 import CoreMediaIO
 
-/// Finds an iPhone connected by USB and streams its screen into `session`.
+/// Finds an iPhone that has a USB connection and streams its screen into `session`.
 ///
-/// macOS exposes the iPhone screen as a capture device (the same path QuickTime uses),
-/// but only after the app opts in to screen capture devices through CoreMediaIO.
+/// macOS shows the iPhone screen to apps as a capture device. QuickTime uses the same path.
+/// First, the app must allow screen capture devices through CoreMediaIO.
 @MainActor
 final class PhoneCapture {
     enum State: Equatable {
@@ -117,7 +117,7 @@ final class PhoneCapture {
         ).devices.first
     }
 
-    /// Makes iOS devices connected by USB appear as capture devices.
+    /// Makes iOS devices that have a USB connection available as capture devices.
     private static func allowScreenCaptureDevices() {
         var address = CMIOObjectPropertyAddress(
             mSelector: CMIOObjectPropertySelector(kCMIOHardwarePropertyAllowScreenCaptureDevices),

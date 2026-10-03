@@ -1,6 +1,6 @@
 #!/bin/sh
-# Fails when Git tracks a file that must stay out of the public repository:
-# a file that matches .gitignore or the local .git/info/exclude.
+# Fails when Git tracks a file that must not be in the public repository.
+# This is a file that matches .gitignore or the local .git/info/exclude.
 set -eu
 
 cd "$(dirname "$0")/.."

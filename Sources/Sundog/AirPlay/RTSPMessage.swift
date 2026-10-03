@@ -70,7 +70,7 @@ struct RTSPResponse {
     var reason = "OK"
     var headers: [(String, String)] = []
     var body = Data()
-    /// Close the connection after this response.
+    /// When true, the session closes the connection after this response.
     var closesConnection = false
 
     static let ok = RTSPResponse()

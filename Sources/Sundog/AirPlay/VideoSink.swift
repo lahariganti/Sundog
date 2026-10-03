@@ -1,6 +1,7 @@
 import AVFoundation
 
-/// Sends decoded-ready video samples to the window's display layer from the network queue.
+/// Sends compressed video samples from the network queue to the display layer of the window.
+/// The display layer decodes the samples.
 final class VideoSink: @unchecked Sendable {
     private let renderer: AVSampleBufferVideoRenderer
 

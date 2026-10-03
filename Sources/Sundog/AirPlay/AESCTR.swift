@@ -3,13 +3,13 @@ import CryptoKit
 import Foundation
 
 /// AES-128 in counter mode as one continuous key stream.
-/// A call can end in the middle of a block; the next call continues at the same position.
+/// A call can stop in the middle of a block. The next call continues from that position.
 final class AESCTR {
     private var cryptor: CCCryptorRef?
     private var counter: [UInt8]
     private var keyStream = [UInt8](repeating: 0, count: 16)
     private var keyStreamOffset = 16
-    // Work buffers. They grow to the largest frame and are then reused.
+    // Work buffers. They increase to the size of the largest frame. Then the code uses them again.
     private var counters: [UInt8] = []
     private var stream: [UInt8] = []
 
@@ -74,7 +74,7 @@ final class AESCTR {
 
         stream.withUnsafeBufferPointer { keys in
             var offset = 0
-            // XOR eight bytes at a time, then the rest.
+            // XOR eight bytes at a time. Then XOR the remaining bytes.
             while offset + 8 <= remaining {
                 let value = source.loadUnaligned(fromByteOffset: index + offset, as: UInt64.self)
                     ^ UnsafeRawPointer(keys.baseAddress! + offset).loadUnaligned(as: UInt64.self)

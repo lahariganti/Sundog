@@ -12,8 +12,8 @@
  *  Lesser General Public License for more details.
  */
 /*
- *  Adapted for Sundog from UxPlay lib/fairplay_playfair.c (commit 4c6e017):
- *  the logger and the state struct are removed. The caller keeps the key message.
+ *  Sundog adapted this file from UxPlay lib/fairplay_playfair.c (commit 4c6e017).
+ *  Sundog removed the logger and the state struct. The caller keeps the key message.
  */
 
 #include <string.h>

@@ -1,7 +1,7 @@
 import AVFoundation
 import AppKit
 
-/// Shows the live iPhone screen, or a short instruction while no iPhone is mirroring.
+/// Shows the iPhone screen. When no iPhone sends Screen Mirroring, it shows a short instruction.
 @MainActor
 final class MirrorView: NSView {
     private let displayLayer = AVSampleBufferDisplayLayer()

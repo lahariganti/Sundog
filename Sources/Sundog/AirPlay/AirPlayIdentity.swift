@@ -1,15 +1,15 @@
 import CryptoKit
 import Foundation
 
-/// The persistent identity that Sundog shows to iPhones on the network.
+/// The identity that Sundog shows to iPhones on the network. `load` keeps it in the user defaults.
 struct AirPlayIdentity: Sendable {
     static let model = "AppleTV3,2"
     static let sourceVersion = "220.68"
     /// AirPlay feature bits: mirroring with FairPlay and legacy pairing.
-    /// Bit 42 ("screen multi codec") permits H.265, which the iPhone needs above 1080 pixels.
+    /// Bit 42 ("screen multi codec") lets the iPhone send H.265. The iPhone must use H.265 above 1080 pixels.
     static let features: UInt64 = 0x400_5A7F_FEE6
 
-    /// The display size that Sundog reports. The iPhone fits its screen to this height.
+    /// The display size that Sundog reports. The iPhone scales its screen to this height.
     static let displayWidth = 3840
     static let displayHeight = 2160
 
@@ -112,7 +112,7 @@ struct AirPlayIdentity: Sendable {
         ])
     }
 
-    /// Encodes a DNS-SD TXT record: each entry is a length byte and "key=value".
+    /// Encodes a DNS-SD TXT record. Each entry is a length byte, then "key=value".
     private static func txtRecord(_ entries: [String: String]) -> Data {
         var data = Data()
         for key in entries.keys.sorted() {

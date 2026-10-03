@@ -77,9 +77,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 }
 
-/// User-facing strings.
+/// The strings that the user sees in the window.
 enum Copy {
     static let starting = "Starting…"
-    static let waitingForMirroring = "On your iPhone, open Control Center and tap Screen Mirroring.\n\nThen select Sundog."
-    static let receiverFailed = "Sundog cannot receive Screen Mirroring.\n\nMake sure that Wi-Fi is on. Then quit Sundog and open it again."
+    static let waitingForMirroring = "On your iPhone, open Control Center.\nTap Screen Mirroring.\nSelect Sundog."
+    static let receiverFailed = "Sundog cannot receive Screen Mirroring.\n\nMake sure that Wi-Fi is on.\nQuit Sundog.\nOpen Sundog again."
 }

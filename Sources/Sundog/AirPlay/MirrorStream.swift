@@ -3,13 +3,14 @@ import Foundation
 import Network
 import os
 
-/// Receives the AirPlay mirror stream on its own TCP port, decrypts the frames,
+/// Receives the AirPlay mirror stream on its own TCP port. It decrypts the frames
 /// and sends them to the video sink.
 ///
 /// Each packet has a 128-byte header and a payload. Header bytes 0–3 hold the
 /// payload size (little endian). Header byte 4 holds the payload type:
-/// 0 is an encrypted frame with length-prefixed NAL units, 1 is the unencrypted codec record:
-/// an avcC record for H.264, or an `hvc1` sample entry with an hvcC record for H.265.
+/// - 0: an encrypted frame with length-prefixed NAL units.
+/// - 1: the unencrypted codec record. For H.264, this is an avcC record.
+///   For H.265, this is an `hvc1` sample entry with an hvcC record.
 final class MirrorStream: @unchecked Sendable {
     private static let logger = Logger(subsystem: "com.lahariganti.Sundog", category: "MirrorStream")
     private static let headerLength = 128
@@ -23,15 +24,15 @@ final class MirrorStream: @unchecked Sendable {
     private var formatDescription: CMVideoFormatDescription?
     private var hasVideo = false
 
-    /// Called on `queue` with the new video size.
+    /// The stream calls this on `queue` with the new video size.
     var onVideoSize: ((CGSize) -> Void)?
-    /// Called on `queue` when the first frame arrives.
+    /// The stream calls this on `queue` when the first frame arrives.
     var onFirstFrame: (() -> Void)?
-    /// Called on `queue` when the stream ends.
+    /// The stream calls this on `queue` when the stream ends.
     var onEnd: (() -> Void)?
 
     /// - Parameters:
-    ///   - sessionKey: the 16-byte AES key from SETUP, after the pairing hash.
+    ///   - sessionKey: the 16-byte AES key from SETUP. The caller applies the pairing hash first.
     ///   - streamConnectionID: the `streamConnectionID` of the type 110 stream.
     init?(sessionKey: Data, streamConnectionID: UInt64, sink: VideoSink, queue: DispatchQueue) {
         let key = (Data("AirPlayStreamKey\(streamConnectionID)".utf8) + sessionKey).sha512Prefix(16)
@@ -44,7 +45,7 @@ final class MirrorStream: @unchecked Sendable {
         self.queue = queue
     }
 
-    /// Starts listening. Calls `ready` on `queue` with the data port, or nil on failure.
+    /// Starts to listen for a connection. Calls `ready` on `queue` with the data port, or with nil if it fails.
     func start(ready: @escaping @Sendable (UInt16?) -> Void) {
         let reported = QueueLocal(false)
         listener.stateUpdateHandler = { [weak self] state in
@@ -143,7 +144,7 @@ final class MirrorStream: @unchecked Sendable {
 
     private func show(encryptedFrame frame: Data) {
         guard let formatDescription else {
-            // The key stream must stay aligned even before the first codec record.
+            // The key stream must remain aligned, also before the first codec record.
             var discarded = frame
             cipher.apply(to: &discarded)
             return

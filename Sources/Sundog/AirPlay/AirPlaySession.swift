@@ -14,7 +14,7 @@ import Network
 /// 6. `RECORD`, then `GET_PARAMETER`, `SET_PARAMETER`, and `POST /feedback` while the session runs.
 /// 7. `TEARDOWN`.
 ///
-/// All state is confined to `queue`.
+/// Only `queue` reads and writes the state.
 final class AirPlaySession: @unchecked Sendable {
     enum Event {
         case mirroringStarted
@@ -148,7 +148,7 @@ final class AirPlaySession: @unchecked Sendable {
             teardown(request)
             reply(.ok)
         default:
-            // SET_PARAMETER, FLUSH, POST /feedback, POST /audioMode, and others need no action.
+            // SET_PARAMETER, FLUSH, POST /feedback, POST /audioMode, and other requests do not have an action.
             reply(.ok)
         }
     }
@@ -202,7 +202,7 @@ final class AirPlaySession: @unchecked Sendable {
         ])
     }
 
-    /// Legacy pairing. Step 1 exchanges X25519 keys and signatures; step 2 checks the iPhone's signature.
+    /// Legacy pairing. Step 1 exchanges X25519 keys and signatures. Step 2 checks the signature of the iPhone.
     private func pairVerify(_ body: Data) -> RTSPResponse {
         let bytes = [UInt8](body)
         guard bytes.count == 68 else { return .failure(400, "Bad Request") }
@@ -241,7 +241,7 @@ final class AirPlaySession: @unchecked Sendable {
               let theirPublic = try? Curve25519.Signing.PublicKey(rawRepresentation: theirSigningKey) else {
             return .failure(470, "Connection Authorization Required", close: true)
         }
-        // The key stream continues after the 64 bytes that encrypted our signature.
+        // The key stream continues after the 64 bytes that Sundog used to encrypt its signature.
         var skipped = Data(count: 64)
         cipher.apply(to: &skipped)
         var signature = Data(bytes[4..<68])
@@ -434,7 +434,7 @@ final class AirPlaySession: @unchecked Sendable {
     }
 }
 
-/// Sends NTP-style timing requests to the iPhone, as an AirPlay receiver must.
+/// Sends NTP-style timing requests to the iPhone. An AirPlay receiver must send these requests.
 final class TimingClient: @unchecked Sendable {
     private let connection: NWConnection
     private let queue: DispatchQueue
@@ -445,7 +445,7 @@ final class TimingClient: @unchecked Sendable {
         self.queue = queue
     }
 
-    /// Calls `ready` on the queue with the local UDP port, or 0 on failure.
+    /// Calls `ready` on the queue with the local UDP port, or with 0 if it fails.
     func start(ready: @escaping @Sendable (UInt16) -> Void) {
         let reported = QueueLocal(false)
         connection.stateUpdateHandler = { [weak self] state in
