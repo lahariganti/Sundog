@@ -1,0 +1,27 @@
+# Build output
+.build/
+build/
+DerivedData/
+.swiftpm/
+*.dmg
+*.xcarchive
+*.dSYM
+*.dSYM.zip
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
+
+# Secrets and signing material. Never commit these.
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
