@@ -15,5 +15,9 @@ let package = Package(
             exclude: ["playfair/LICENSE.md"],
             cSettings: [.unsafeFlags(["-w"])]
         ),
+        .testTarget(
+            name: "SundogTests",
+            dependencies: ["Sundog"]
+        ),
     ]
 )

@@ -1,14 +1,17 @@
 import CoreMedia
 import Foundation
 import Network
+import os
 
 /// Receives the AirPlay mirror stream on its own TCP port, decrypts the frames,
 /// and sends them to the video sink.
 ///
 /// Each packet has a 128-byte header and a payload. Header bytes 0–3 hold the
 /// payload size (little endian). Header byte 4 holds the payload type:
-/// 0 is an encrypted frame in AVCC format, 1 is the unencrypted avcC codec record.
+/// 0 is an encrypted frame with length-prefixed NAL units, 1 is the unencrypted codec record:
+/// an avcC record for H.264, or an `hvc1` sample entry with an hvcC record for H.265.
 final class MirrorStream: @unchecked Sendable {
+    private static let logger = Logger(subsystem: "com.lahariganti.Sundog", category: "MirrorStream")
     private static let headerLength = 128
     private static let maximumPayloadLength = 16 << 20
 
@@ -123,22 +126,29 @@ final class MirrorStream: @unchecked Sendable {
     private func handle(type: UInt8, payload: Data) {
         switch type {
         case 0:
-            var frame = payload
-            cipher.apply(to: &frame)
-            show(frame)
+            show(encryptedFrame: payload)
         case 1:
-            guard let description = Self.formatDescription(fromAVCC: payload) else { return }
+            let isHEVC = payload.count > 8 && payload[payload.startIndex + 4..<payload.startIndex + 8] == Data("hvc1".utf8)
+            let description = isHEVC ? Self.formatDescription(fromHVC1: payload) : Self.formatDescription(fromAVCC: payload)
+            guard let description else { return }
             formatDescription = description
             let dimensions = CMVideoFormatDescriptionGetPresentationDimensions(
                 description, usePixelAspectRatio: true, useCleanAperture: true)
+            Self.logger.notice("Video format: \(isHEVC ? "H.265" : "H.264", privacy: .public) \(Int(dimensions.width)) x \(Int(dimensions.height))")
             onVideoSize?(dimensions)
         default:
             break
         }
     }
 
-    private func show(_ frame: Data) {
-        guard let formatDescription, let sample = Self.sampleBuffer(frame, format: formatDescription) else { return }
+    private func show(encryptedFrame frame: Data) {
+        guard let formatDescription else {
+            // The key stream must stay aligned even before the first codec record.
+            var discarded = frame
+            cipher.apply(to: &discarded)
+            return
+        }
+        guard let sample = Self.sampleBuffer(frame, format: formatDescription, cipher: cipher) else { return }
         sink.enqueue(sample)
         if !hasVideo {
             hasVideo = true
@@ -147,6 +157,43 @@ final class MirrorStream: @unchecked Sendable {
     }
 
     // MARK: Core Media
+
+    /// Reads the VPS, SPS, and PPS sets from the hvcC box inside an `hvc1` sample entry.
+    static func formatDescription(fromHVC1 entry: Data) -> CMVideoFormatDescription? {
+        let bytes = [UInt8](entry)
+        guard let box = entry.range(of: Data("hvcC".utf8)) else { return nil }
+        // The hvcC record: 22 bytes of configuration, the array count, then the arrays.
+        var index = entry.distance(from: entry.startIndex, to: box.upperBound) + 22
+        guard index < bytes.count else { return nil }
+        let arrayCount = Int(bytes[index])
+        index += 1
+        var sets: [[UInt8]] = []
+        for _ in 0..<arrayCount {
+            guard index + 3 <= bytes.count else { return nil }
+            let nalCount = Int(bytes[index + 1]) << 8 | Int(bytes[index + 2])
+            index += 3
+            for _ in 0..<nalCount {
+                guard index + 2 <= bytes.count else { return nil }
+                let length = Int(bytes[index]) << 8 | Int(bytes[index + 1])
+                index += 2
+                guard length > 0, index + length <= bytes.count else { return nil }
+                sets.append(Array(bytes[index..<index + length]))
+                index += length
+            }
+        }
+        guard sets.count >= 3 else { return nil }
+        return makeFormatDescription(sets) { pointers, sizes, output in
+            CMVideoFormatDescriptionCreateFromHEVCParameterSets(
+                allocator: kCFAllocatorDefault,
+                parameterSetCount: sets.count,
+                parameterSetPointers: pointers,
+                parameterSetSizes: sizes,
+                nalUnitHeaderLength: 4,
+                extensions: nil,
+                formatDescriptionOut: output
+            )
+        }
+    }
 
     /// Reads the SPS and PPS sets from an avcC record.
     static func formatDescription(fromAVCC record: Data) -> CMVideoFormatDescription? {
@@ -174,6 +221,22 @@ final class MirrorStream: @unchecked Sendable {
         index += 1
         guard ppsCount > 0, readSets(count: ppsCount) else { return nil }
 
+        return makeFormatDescription(sets) { pointers, sizes, output in
+            CMVideoFormatDescriptionCreateFromH264ParameterSets(
+                allocator: kCFAllocatorDefault,
+                parameterSetCount: sets.count,
+                parameterSetPointers: pointers,
+                parameterSetSizes: sizes,
+                nalUnitHeaderLength: 4,
+                formatDescriptionOut: output
+            )
+        }
+    }
+
+    private static func makeFormatDescription(
+        _ sets: [[UInt8]],
+        create: ([UnsafePointer<UInt8>], [Int], UnsafeMutablePointer<CMVideoFormatDescription?>) -> OSStatus
+    ) -> CMVideoFormatDescription? {
         let joined = sets.flatMap { $0 }
         let sizes = sets.map(\.count)
         var description: CMVideoFormatDescription?
@@ -184,19 +247,13 @@ final class MirrorStream: @unchecked Sendable {
                 pointers.append(buffer.baseAddress! + offset)
                 offset += size
             }
-            return CMVideoFormatDescriptionCreateFromH264ParameterSets(
-                allocator: kCFAllocatorDefault,
-                parameterSetCount: sets.count,
-                parameterSetPointers: pointers,
-                parameterSetSizes: sizes,
-                nalUnitHeaderLength: 4,
-                formatDescriptionOut: &description
-            )
+            return create(pointers, sizes, &description)
         }
         return status == noErr ? description : nil
     }
 
-    static func sampleBuffer(_ frame: Data, format: CMVideoFormatDescription) -> CMSampleBuffer? {
+    /// Decrypts the frame directly into the memory of a new sample buffer.
+    static func sampleBuffer(_ frame: Data, format: CMVideoFormatDescription, cipher: AESCTR) -> CMSampleBuffer? {
         var block: CMBlockBuffer?
         guard CMBlockBufferCreateWithMemoryBlock(
             allocator: kCFAllocatorDefault,
@@ -210,11 +267,14 @@ final class MirrorStream: @unchecked Sendable {
             blockBufferOut: &block
         ) == noErr, let block else { return nil }
 
-        let copied = frame.withUnsafeBytes { bytes in
-            CMBlockBufferReplaceDataBytes(
-                with: bytes.baseAddress!, blockBuffer: block, offsetIntoDestination: 0, dataLength: frame.count)
+        var destination: UnsafeMutablePointer<CChar>?
+        var contiguousLength = 0
+        guard CMBlockBufferGetDataPointer(
+            block, atOffset: 0, lengthAtOffsetOut: nil, totalLengthOut: &contiguousLength, dataPointerOut: &destination
+        ) == noErr, let destination, contiguousLength == frame.count else { return nil }
+        frame.withUnsafeBytes { source in
+            cipher.apply(from: source, to: UnsafeMutableRawBufferPointer(start: destination, count: frame.count))
         }
-        guard copied == noErr else { return nil }
 
         var sample: CMSampleBuffer?
         var size = frame.count

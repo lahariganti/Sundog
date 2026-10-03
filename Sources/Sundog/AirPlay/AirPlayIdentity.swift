@@ -5,8 +5,13 @@ import Foundation
 struct AirPlayIdentity: Sendable {
     static let model = "AppleTV3,2"
     static let sourceVersion = "220.68"
-    /// AirPlay feature bits: mirroring with FairPlay and legacy pairing, H.264 only.
-    static let features: UInt64 = 0x5A7F_FEE6
+    /// AirPlay feature bits: mirroring with FairPlay and legacy pairing.
+    /// Bit 42 ("screen multi codec") permits H.265, which the iPhone needs above 1080 pixels.
+    static let features: UInt64 = 0x400_5A7F_FEE6
+
+    /// The display size that Sundog reports. The iPhone fits its screen to this height.
+    static let displayWidth = 3840
+    static let displayHeight = 2160
 
     let name: String
     /// A MAC-style address, for example "AA:BB:CC:DD:EE:FF".

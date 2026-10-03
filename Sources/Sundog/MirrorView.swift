@@ -32,6 +32,7 @@ final class MirrorView: NSView {
         ])
 
         let contextMenu = NSMenu()
+        contextMenu.addItem(withTitle: "Stop Mirroring", action: #selector(AppDelegate.stopMirroring(_:)), keyEquivalent: "")
         contextMenu.addItem(withTitle: "Quit Sundog", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         menu = contextMenu
     }

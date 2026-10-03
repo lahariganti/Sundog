@@ -13,9 +13,10 @@ enum SundogApp {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var panel: MirrorPanel?
     private var receiver: AirPlayReceiver?
+    private var isMirroring = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = makeMainMenu()
@@ -25,23 +26,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.orderFrontRegardless()
         self.panel = panel
 
-        let receiver = AirPlayReceiver(name: "Sundog", sink: panel.mirrorView.videoSink) { [weak panel] event in
+        let receiver = AirPlayReceiver(name: "Sundog", sink: panel.mirrorView.videoSink) { [weak self, weak panel] event in
             Task { @MainActor in
                 guard let panel else { return }
                 switch event {
                 case .waiting:
+                    self?.isMirroring = false
                     panel.mirrorView.showMessage(Copy.waitingForMirroring)
                 case .mirroring:
+                    self?.isMirroring = true
                     panel.mirrorView.showVideo()
                 case .videoSize(let size):
                     panel.fit(videoSize: size)
                 case .failed:
+                    self?.isMirroring = false
                     panel.mirrorView.showMessage(Copy.receiverFailed)
                 }
             }
         }
         receiver.start()
         self.receiver = receiver
+    }
+
+    @objc func stopMirroring(_ sender: Any?) {
+        receiver?.stopMirroring()
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        menuItem.action == #selector(stopMirroring(_:)) ? isMirroring : true
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -51,6 +63,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func makeMainMenu() -> NSMenu {
         let appMenu = NSMenu(title: "Sundog")
         appMenu.addItem(withTitle: "About Sundog", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Stop Mirroring", action: #selector(stopMirroring(_:)), keyEquivalent: ".")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Hide Sundog", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: "Quit Sundog", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")

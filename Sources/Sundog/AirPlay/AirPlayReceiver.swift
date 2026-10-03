@@ -14,7 +14,7 @@ final class AirPlayReceiver: @unchecked Sendable {
     private let identity: AirPlayIdentity
     private let sink: VideoSink
     private let onEvent: @Sendable (Event) -> Void
-    private let queue = DispatchQueue(label: "com.lahariganti.Sundog.airplay")
+    private let queue = DispatchQueue(label: "com.lahariganti.Sundog.airplay", qos: .userInteractive)
     private var listener: NWListener?
     private var advertisements: [DNSServiceRef] = []
     private var sessions: [ObjectIdentifier: AirPlaySession] = [:]
@@ -38,6 +38,14 @@ final class AirPlayReceiver: @unchecked Sendable {
             } catch {
                 onEvent(.failed)
             }
+        }
+    }
+
+    /// Ends the current mirroring session. The iPhone stops Screen Mirroring.
+    func stopMirroring() {
+        queue.async { [self] in
+            guard let id = mirroringSession else { return }
+            sessions[id]?.close()
         }
     }
 

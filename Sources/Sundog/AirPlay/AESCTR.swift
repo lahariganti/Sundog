@@ -9,6 +9,9 @@ final class AESCTR {
     private var counter: [UInt8]
     private var keyStream = [UInt8](repeating: 0, count: 16)
     private var keyStreamOffset = 16
+    // Work buffers. They grow to the largest frame and are then reused.
+    private var counters: [UInt8] = []
+    private var stream: [UInt8] = []
 
     init?(key: Data, iv: Data) {
         guard key.count == 16, iv.count == 16 else { return nil }
@@ -36,11 +39,17 @@ final class AESCTR {
     }
 
     func apply(to buffer: UnsafeMutableRawBufferPointer) {
+        apply(from: UnsafeRawBufferPointer(buffer), to: buffer)
+    }
+
+    /// Writes `source` XOR the key stream to `destination`. The buffers can be the same memory.
+    func apply(from source: UnsafeRawBufferPointer, to destination: UnsafeMutableRawBufferPointer) {
+        precondition(destination.count >= source.count)
         var index = 0
-        let count = buffer.count
+        let count = source.count
 
         while index < count, keyStreamOffset < 16 {
-            buffer[index] ^= keyStream[keyStreamOffset]
+            destination[index] = source[index] ^ keyStream[keyStreamOffset]
             keyStreamOffset += 1
             index += 1
         }
@@ -48,21 +57,40 @@ final class AESCTR {
 
         let remaining = count - index
         let blockCount = (remaining + 15) / 16
-        var counters = [UInt8](repeating: 0, count: blockCount * 16)
+        let length = blockCount * 16
+        if counters.count < length {
+            counters = [UInt8](repeating: 0, count: length)
+            stream = [UInt8](repeating: 0, count: length)
+        }
         for block in 0..<blockCount {
-            counters.replaceSubrange(block * 16..<(block + 1) * 16, with: counter)
+            let start = block * 16
+            for byte in 0..<16 {
+                counters[start + byte] = counter[byte]
+            }
             incrementCounter()
         }
-        var stream = [UInt8](repeating: 0, count: counters.count)
         var moved = 0
-        CCCryptorUpdate(cryptor, counters, counters.count, &stream, stream.count, &moved)
+        CCCryptorUpdate(cryptor, counters, length, &stream, length, &moved)
 
-        for offset in 0..<remaining {
-            buffer[index + offset] ^= stream[offset]
+        stream.withUnsafeBufferPointer { keys in
+            var offset = 0
+            // XOR eight bytes at a time, then the rest.
+            while offset + 8 <= remaining {
+                let value = source.loadUnaligned(fromByteOffset: index + offset, as: UInt64.self)
+                    ^ UnsafeRawPointer(keys.baseAddress! + offset).loadUnaligned(as: UInt64.self)
+                destination.storeBytes(of: value, toByteOffset: index + offset, as: UInt64.self)
+                offset += 8
+            }
+            while offset < remaining {
+                destination[index + offset] = source[index + offset] ^ keys[offset]
+                offset += 1
+            }
         }
 
         let lastBlockStart = (blockCount - 1) * 16
-        keyStream = Array(stream[lastBlockStart..<lastBlockStart + 16])
+        for byte in 0..<16 {
+            keyStream[byte] = stream[lastBlockStart + byte]
+        }
         keyStreamOffset = remaining - lastBlockStart
     }
 
