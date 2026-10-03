@@ -14,24 +14,34 @@ enum SundogApp {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let capture = PhoneCapture()
     private var panel: MirrorPanel?
+    private var receiver: AirPlayReceiver?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = makeMainMenu()
 
         let panel = MirrorPanel()
-        panel.mirrorView.attach(capture.session)
-        capture.onStateChange = { [weak panel] state in
-            panel?.mirrorView.show(state)
-        }
-        capture.onVideoSizeChange = { [weak panel] size in
-            panel?.fit(videoSize: size)
-        }
+        panel.mirrorView.showMessage(Copy.starting)
         panel.orderFrontRegardless()
         self.panel = panel
 
-        capture.start()
+        let receiver = AirPlayReceiver(name: "Sundog", sink: panel.mirrorView.videoSink) { [weak panel] event in
+            Task { @MainActor in
+                guard let panel else { return }
+                switch event {
+                case .waiting:
+                    panel.mirrorView.showMessage(Copy.waitingForMirroring)
+                case .mirroring:
+                    panel.mirrorView.showVideo()
+                case .videoSize(let size):
+                    panel.fit(videoSize: size)
+                case .failed:
+                    panel.mirrorView.showMessage(Copy.receiverFailed)
+                }
+            }
+        }
+        receiver.start()
+        self.receiver = receiver
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -51,4 +61,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.addItem(appItem)
         return mainMenu
     }
+}
+
+/// User-facing strings.
+enum Copy {
+    static let starting = "Starting…"
+    static let waitingForMirroring = "On your iPhone, open Control Center and tap Screen Mirroring.\n\nThen select Sundog."
+    static let receiverFailed = "Sundog cannot receive Screen Mirroring.\n\nMake sure that Wi-Fi is on. Then quit Sundog and open it again."
 }

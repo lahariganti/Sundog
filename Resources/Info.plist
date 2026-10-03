@@ -26,6 +26,13 @@
 	<string>14.0</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Sundog shows your iPhone screen. macOS treats a connected iPhone screen as a camera.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Sundog receives Screen Mirroring from your iPhone on your local network.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_airplay._tcp</string>
+		<string>_raop._tcp</string>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Sundog plays the sound from your iPhone on your Mac.</string>
 	<key>NSHighResolutionCapable</key>

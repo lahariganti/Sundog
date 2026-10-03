@@ -1,19 +1,23 @@
 import AVFoundation
 import AppKit
 
-/// Shows the live iPhone screen, or a short instruction while no phone is mirroring.
+/// Shows the live iPhone screen, or a short instruction while no iPhone is mirroring.
 @MainActor
 final class MirrorView: NSView {
-    private let previewLayer = AVCaptureVideoPreviewLayer()
+    private let displayLayer = AVSampleBufferDisplayLayer()
     private let messageLabel = NSTextField(wrappingLabelWithString: "")
+    let videoSink: VideoSink
+    var onHoverChange: ((Bool) -> Void)?
 
     override init(frame frameRect: NSRect) {
+        videoSink = VideoSink(layer: displayLayer)
         super.init(frame: frameRect)
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
 
-        previewLayer.videoGravity = .resizeAspect
-        layer?.addSublayer(previewLayer)
+        displayLayer.videoGravity = .resizeAspect
+        displayLayer.isHidden = true
+        layer?.addSublayer(displayLayer)
 
         messageLabel.alignment = .center
         messageLabel.textColor = .white
@@ -39,30 +43,40 @@ final class MirrorView: NSView {
 
     override var mouseDownCanMoveWindow: Bool { true }
 
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self
+        ))
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        onHoverChange?(true)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        onHoverChange?(false)
+    }
+
     override func layout() {
         super.layout()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        previewLayer.frame = bounds
+        displayLayer.frame = bounds
         CATransaction.commit()
     }
 
-    func attach(_ session: AVCaptureSession) {
-        previewLayer.session = session
+    func showMessage(_ text: String) {
+        messageLabel.stringValue = text
+        messageLabel.isHidden = false
+        displayLayer.isHidden = true
     }
 
-    func show(_ state: PhoneCapture.State) {
-        switch state {
-        case .waitingForAccess:
-            messageLabel.stringValue = "Starting…"
-        case .accessDenied:
-            messageLabel.stringValue = "Sundog needs camera access to show your iPhone.\n\nOpen System Settings > Privacy & Security > Camera, and turn on Sundog."
-        case .waitingForPhone:
-            messageLabel.stringValue = "Connect your iPhone with a USB cable.\n\nUnlock it, and tap Trust if it asks."
-        case .mirroring:
-            messageLabel.stringValue = ""
-        }
-        messageLabel.isHidden = state == .mirroring
-        previewLayer.isHidden = state != .mirroring
+    func showVideo() {
+        messageLabel.isHidden = true
+        displayLayer.isHidden = false
     }
 }

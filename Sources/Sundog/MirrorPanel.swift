@@ -9,14 +9,16 @@ final class MirrorPanel: NSPanel {
     init() {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 300, height: 620),
-            styleMask: [.titled, .fullSizeContentView, .resizable, .nonactivatingPanel],
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView, .resizable, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
-        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-            standardWindowButton(button)?.isHidden = true
+        standardWindowButton(.zoomButton)?.isHidden = true
+        showWindowButtons(false)
+        mirrorView.onHoverChange = { [weak self] isInside in
+            self?.showWindowButtons(isInside)
         }
 
         isFloatingPanel = true
@@ -32,6 +34,14 @@ final class MirrorPanel: NSPanel {
 
         center()
         setFrameAutosaveName("SundogMirror")
+    }
+
+    /// Shows the close and minimize buttons only while the pointer is over the window,
+    /// so the audience sees a clean window.
+    private func showWindowButtons(_ visible: Bool) {
+        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton] {
+            standardWindowButton(button)?.animator().alphaValue = visible ? 1 : 0
+        }
     }
 
     /// Matches the window shape to the phone screen and keeps its area and center.
