@@ -15,7 +15,9 @@ final class MirrorPanel: NSPanel {
         )
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
-        standardWindowButton(.zoomButton)?.isHidden = true
+        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            standardWindowButton(button)?.isHidden = true
+        }
         showWindowButtons(false)
         mirrorView.onHoverChange = { [weak self] isInside in
             self?.showWindowButtons(isInside)
@@ -33,14 +35,61 @@ final class MirrorPanel: NSPanel {
 
         center()
         setFrameAutosaveName("SundogMirror")
+
+        NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: self, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleSnap() }
+        }
+    }
+
+    // MARK: Snap to corners
+
+    private static let snapDistance: CGFloat = 60
+    private static let cornerMargin: CGFloat = 16
+    private var snapTimer: Timer?
+
+    /// Waits until the drag ends, then snaps the window into a screen corner when it is near one.
+    private func scheduleSnap() {
+        snapTimer?.invalidate()
+        snapTimer = Timer.scheduledTimer(withTimeInterval: 0.12, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if NSEvent.pressedMouseButtons & 1 != 0 {
+                    self.scheduleSnap()
+                } else {
+                    self.snapToCorner()
+                }
+            }
+        }
+    }
+
+    private func snapToCorner() {
+        guard let area = screen?.visibleFrame else { return }
+        let current = frame
+        let nearLeft = current.minX - area.minX < Self.snapDistance
+        let nearRight = area.maxX - current.maxX < Self.snapDistance
+        let nearBottom = current.minY - area.minY < Self.snapDistance
+        let nearTop = area.maxY - current.maxY < Self.snapDistance
+        guard (nearLeft || nearRight) && (nearBottom || nearTop) else { return }
+        let x = nearLeft ? area.minX + Self.cornerMargin : area.maxX - Self.cornerMargin - current.width
+        let y = nearBottom ? area.minY + Self.cornerMargin : area.maxY - Self.cornerMargin - current.height
+        let target = NSRect(x: x, y: y, width: current.width, height: current.height)
+        guard target.origin != current.origin else { return }
+        setFrame(target, display: true, animate: true)
+    }
+
+    /// Shows the window, or hides it. Mirroring continues while the window is hidden.
+    func toggleVisibility() {
+        if isVisible {
+            orderOut(nil)
+        } else {
+            orderFrontRegardless()
+        }
     }
 
     /// Shows the close and minimize buttons only while the pointer is over the window.
     /// At all other times, the audience sees no buttons.
     private func showWindowButtons(_ visible: Bool) {
-        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton] {
-            standardWindowButton(button)?.animator().alphaValue = visible ? 1 : 0
-        }
+        mirrorView.showWindowButtons(visible)
     }
 
     /// The waiting screen has the shape of a standard 6.1-inch iPhone in portrait (1179 x 2556 pixels).

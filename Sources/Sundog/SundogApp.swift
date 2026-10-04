@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 
 @main
 @MainActor
@@ -17,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var panel: MirrorPanel?
     private var receiver: AirPlayReceiver?
     private var isMirroring = false
+    private var hotKey: HotKey?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.mainMenu = makeMainMenu()
@@ -48,6 +50,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         receiver.start()
         self.receiver = receiver
+
+        // Control-Option-Command-S shows or hides the window from any app.
+        hotKey = HotKey(keyCode: kVK_ANSI_S, modifiers: controlKey | optionKey | cmdKey) { [weak panel] in
+            panel?.toggleVisibility()
+        }
+    }
+
+    @objc func toggleWindow(_ sender: Any?) {
+        panel?.toggleVisibility()
     }
 
     @objc func stopMirroring(_ sender: Any?) {
@@ -58,8 +69,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         menuItem.action == #selector(stopMirroring(_:)) ? isMirroring : true
     }
 
+    // The shortcut and the yellow button hide the window, and Sundog keeps running. The red button quits.
+    /// A click on Sundog in the Dock shows the hidden window again.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        panel?.orderFrontRegardless()
+        return true
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        false
     }
 
     private func makeMainMenu() -> NSMenu {

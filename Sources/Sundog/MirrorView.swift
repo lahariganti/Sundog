@@ -19,6 +19,12 @@ final class MirrorView: NSView {
     private var brandConstraints: [NSLayoutConstraint] = []
     private let brandImage = Bundle.main.image(forResource: "Brand")
     let videoSink: VideoSink
+    private let closeButton = WindowButton(
+        color: NSColor(srgbRed: 1, green: 0.373, blue: 0.341, alpha: 1),
+        toolTip: "Quit Sundog", target: NSApp, action: #selector(NSApplication.terminate(_:)))
+    private let hideButton = WindowButton(
+        color: NSColor(srgbRed: 0.996, green: 0.737, blue: 0.180, alpha: 1),
+        toolTip: "Hide Window (Control-Option-Command-S)", target: nil, action: #selector(AppDelegate.toggleWindow(_:)))
     var onHoverChange: ((Bool) -> Void)?
 
     override init(frame frameRect: NSRect) {
@@ -70,7 +76,20 @@ final class MirrorView: NSView {
             messageLabel.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
         }
 
+        for button in [closeButton, hideButton] {
+            button.alphaValue = 0
+            addSubview(button)
+        }
+        NSLayoutConstraint.activate([
+            closeButton.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            closeButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            hideButton.centerYAnchor.constraint(equalTo: closeButton.centerYAnchor),
+            hideButton.leadingAnchor.constraint(equalTo: closeButton.trailingAnchor, constant: 8),
+        ])
+
         let contextMenu = NSMenu()
+        let hide = contextMenu.addItem(withTitle: "Hide Window", action: #selector(AppDelegate.toggleWindow(_:)), keyEquivalent: "s")
+        hide.keyEquivalentModifierMask = [.control, .option, .command]
         contextMenu.addItem(withTitle: "Stop Mirroring", action: #selector(AppDelegate.stopMirroring(_:)), keyEquivalent: "")
         contextMenu.addItem(withTitle: "Quit Sundog", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "")
         menu = contextMenu
@@ -107,6 +126,12 @@ final class MirrorView: NSView {
         CATransaction.setDisableActions(true)
         displayLayer.frame = bounds
         CATransaction.commit()
+    }
+
+    func showWindowButtons(_ visible: Bool) {
+        for button in [closeButton, hideButton] {
+            button.animator().alphaValue = visible ? 1 : 0
+        }
     }
 
     func showMessage(_ text: String) {
