@@ -57,6 +57,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
     }
 
+    @objc func showAbout(_ sender: Any?) {
+        let credits = NSMutableAttributedString(
+            string: "Your iPhone, in a little window on your Mac.\n\nShow or hide the window from any app: Control-Option-Command-S.\n\n",
+            attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.labelColor]
+        )
+        credits.append(NSAttributedString(
+            string: "Source code",
+            attributes: [.font: NSFont.systemFont(ofSize: 11), .link: URL(string: "https://github.com/lahariganti/Sundog")!]
+        ))
+        credits.append(NSAttributedString(
+            string: " · AirPlay code from UxPlay",
+            attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]
+        ))
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        credits.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: credits.length))
+        NSApp.activate()
+        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+    }
+
+    @objc func showWindow(_ sender: Any?) {
+        panel?.orderFrontRegardless()
+    }
+
     @objc func toggleWindow(_ sender: Any?) {
         panel?.toggleVisibility()
     }
@@ -82,8 +106,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 
     private func makeMainMenu() -> NSMenu {
         let appMenu = NSMenu(title: "Sundog")
-        appMenu.addItem(withTitle: "About Sundog", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About Sundog", action: #selector(showAbout(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Show Window", action: #selector(showWindow(_:)), keyEquivalent: "")
         appMenu.addItem(withTitle: "Stop Mirroring", action: #selector(stopMirroring(_:)), keyEquivalent: ".")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Hide Sundog", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")

@@ -13,7 +13,9 @@
 #   SUNDOG_ICON            An .icns file for the app icon. Without it, macOS shows the default icon.
 #   SUNDOG_BRAND_IMAGE     A PNG for the waiting screen. Without it, the waiting screen shows only text.
 #
-# Use --skip-notarize to test the packaging without notarization.
+# Options:
+#   --skip-notarize  Test the packaging without notarization.
+#   --app-only       Stop after the signed app (build/Sundog.app). Another tool can then package it.
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -21,9 +23,14 @@ cd "$(dirname "$0")/.."
 IDENTITY="${SUNDOG_SIGN_IDENTITY:-Developer ID Application}"
 PROFILE="${SUNDOG_NOTARY_PROFILE:-sundog-notary}"
 NOTARIZE=1
-if [ "${1:-}" = "--skip-notarize" ]; then
-    NOTARIZE=0
-fi
+APP_ONLY=0
+for option in "$@"; do
+    case "$option" in
+        --skip-notarize) NOTARIZE=0 ;;
+        --app-only) APP_ONLY=1 ;;
+        *) echo "Unknown option: $option" >&2; exit 2 ;;
+    esac
+done
 
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
 APP=build/Sundog.app
@@ -49,6 +56,10 @@ fi
 # 2. Sign the app with the hardened runtime and a secure timestamp.
 codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
+if [ "$APP_ONLY" -eq 1 ]; then
+    echo "Built $APP"
+    exit 0
+fi
 
 # 3. Make the DMG: the app and a link to Applications.
 rm -rf "$STAGING" "$DMG"
