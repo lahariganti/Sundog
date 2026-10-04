@@ -19,7 +19,13 @@ final class AirPlayReceiver: @unchecked Sendable {
     private var listener: NWListener?
     private var advertisements: [DNSServiceRef] = []
     private var sessions: [ObjectIdentifier: AirPlaySession] = [:]
+    /// The session that shows video.
     private var mirroringSession: ObjectIdentifier?
+    /// A session that set up its video stream but has no frame yet, while no session shows video.
+    private var connectingSession: ObjectIdentifier?
+    /// The last video size of each session, to restore the window shape after a takeover.
+    private var videoSizes: [ObjectIdentifier: CGSize] = [:]
+    private static let maximumSessions = 8
 
     init(name: String, sink: VideoSink, onEvent: @escaping @Sendable (Event) -> Void) {
         identity = AirPlayIdentity.load(name: name)
@@ -66,6 +72,11 @@ final class AirPlayReceiver: @unchecked Sendable {
     }
 
     private func accept(_ connection: NWConnection) {
+        // Every client on the local network can connect. Limit the memory that they can use.
+        guard sessions.count < Self.maximumSessions else {
+            connection.cancel()
+            return
+        }
         var id: ObjectIdentifier?
         let session = AirPlaySession(connection: connection, identity: identity, sink: sink, queue: queue) { [weak self] event in
             guard let self, let id else { return }
@@ -76,10 +87,8 @@ final class AirPlayReceiver: @unchecked Sendable {
         session.onClose = { [weak self] in
             guard let self, let id else { return }
             self.sessions[id] = nil
-            if self.mirroringSession == id {
-                self.mirroringSession = nil
-                self.onEvent(.waiting)
-            }
+            self.videoSizes[id] = nil
+            self.endSession(id)
         }
         session.start()
     }
@@ -87,21 +96,39 @@ final class AirPlayReceiver: @unchecked Sendable {
     private func sessionEvent(_ event: AirPlaySession.Event, from id: ObjectIdentifier) {
         switch event {
         case .connecting:
-            if mirroringSession == nil { onEvent(.connecting) }
-        case .mirroringStarted:
-            // A new iPhone replaces the current one.
-            if let current = mirroringSession, current != id {
-                sessions[current]?.close()
-            }
-            mirroringSession = id
-            onEvent(.mirroring)
+            guard mirroringSession == nil else { return }
+            connectingSession = id
+            onEvent(.connecting)
         case .videoSize(let size):
-            onEvent(.videoSize(size))
-        case .mirroringEnded:
-            if mirroringSession == id {
-                mirroringSession = nil
-                onEvent(.waiting)
+            videoSizes[id] = size
+            if mirroringSession == id || (mirroringSession == nil && connectingSession == id) {
+                onEvent(.videoSize(size))
             }
+        case .mirroringStarted:
+            // A new iPhone replaces the current one. Change the owner first, so that the old
+            // session's end neither clears the new video nor shows the waiting screen.
+            let previous = mirroringSession
+            mirroringSession = id
+            if connectingSession == id { connectingSession = nil }
+            if let previous, previous != id {
+                sessions[previous]?.close()
+            }
+            if let size = videoSizes[id] { onEvent(.videoSize(size)) }
+            onEvent(.mirroring)
+        case .mirroringEnded:
+            endSession(id)
+        }
+    }
+
+    /// A session stopped its video or closed.
+    private func endSession(_ id: ObjectIdentifier) {
+        if mirroringSession == id {
+            mirroringSession = nil
+            sink.clear()
+            onEvent(.waiting)
+        } else if connectingSession == id {
+            connectingSession = nil
+            if mirroringSession == nil { onEvent(.waiting) }
         }
     }
 

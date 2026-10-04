@@ -49,6 +49,8 @@ final class AirPlaySession: @unchecked Sendable {
     private var timing: TimingClient?
     private var mirror: MirrorStream?
     private var audioListeners: [NWListener] = []
+    private var audioConnections: [NWConnection] = []
+    private static let maximumPendingRequests = 32
 
     init(connection: NWConnection, identity: AirPlayIdentity, sink: VideoSink, queue: DispatchQueue,
          onEvent: @escaping (Event) -> Void) {
@@ -101,6 +103,11 @@ final class AirPlaySession: @unchecked Sendable {
         do {
             while let request = try RTSPRequest.parse(from: &buffer) {
                 pending.append(request)
+                // An iPhone sends one request at a time. A long queue means a misbehaving client.
+                if pending.count > Self.maximumPendingRequests {
+                    close()
+                    return
+                }
             }
         } catch {
             close()
@@ -364,7 +371,7 @@ final class AirPlaySession: @unchecked Sendable {
         guard mirror != nil else { return }
         mirror?.stop()
         mirror = nil
-        sink.clear()
+        // The receiver clears the shared video sink, and only for the session that shows video.
         onEvent(.mirroringEnded)
     }
 
@@ -374,6 +381,8 @@ final class AirPlaySession: @unchecked Sendable {
         timing = nil
         audioListeners.forEach { $0.cancel() }
         audioListeners.removeAll()
+        audioConnections.forEach { $0.cancel() }
+        audioConnections.removeAll()
     }
 
     // MARK: Ports
@@ -407,7 +416,7 @@ final class AirPlaySession: @unchecked Sendable {
                     reported.value = true
                     if let port = listener.port?.rawValue { ports.value.append(port) }
                     remaining.value -= 1
-                case .failed, .cancelled:
+                case .failed, .cancelled, .waiting:
                     reported.value = true
                     remaining.value -= 1
                 default:
@@ -415,7 +424,8 @@ final class AirPlaySession: @unchecked Sendable {
                 }
                 if remaining.value == 0 { ready(ports.value) }
             }
-            listener.newConnectionHandler = { [queue] connection in
+            listener.newConnectionHandler = { [weak self, queue] connection in
+                self?.audioConnections.append(connection)
                 connection.start(queue: queue)
                 Self.discard(connection)
             }
@@ -462,7 +472,7 @@ final class TimingClient: @unchecked Sendable {
                 ready(localPort)
                 self.receive()
                 self.startRequests()
-            case .failed, .cancelled:
+            case .failed, .cancelled, .waiting:
                 reported.value = true
                 ready(0)
             default:

@@ -102,15 +102,31 @@ final class MirrorPanel: NSPanel {
         contentAspectRatio = size
         // The instruction must fit in three lines.
         contentMinSize = NSSize(width: 240, height: 520)
-        let current = frame
-        let target = NSRect(
-            x: current.midX - size.width / 2,
-            y: current.midY - size.height / 2,
-            width: size.width,
-            height: size.height
-        )
-        setFrame(constrainFrameRect(target, to: screen), display: true, animate: isVisible)
+        setFrame(placed(size), display: true, animate: isVisible)
         invalidateShadow()
+    }
+
+    /// The frame for a new window size. A window snapped to a screen edge or corner stays there.
+    /// Otherwise the window keeps its center. The window shrinks to fit the screen, and it never
+    /// leaves the visible screen area.
+    private func placed(_ requested: CGSize) -> NSRect {
+        let current = frame
+        guard let area = screen?.visibleFrame else {
+            return NSRect(x: current.midX - requested.width / 2, y: current.midY - requested.height / 2,
+                          width: requested.width, height: requested.height)
+        }
+        let scale = min(1, area.width / requested.width, area.height / requested.height)
+        let size = CGSize(width: requested.width * scale, height: requested.height * scale)
+        let tolerance = Self.cornerMargin + 4
+        let atLeft = current.minX - area.minX <= tolerance
+        let atRight = area.maxX - current.maxX <= tolerance
+        let atBottom = current.minY - area.minY <= tolerance
+        let atTop = area.maxY - current.maxY <= tolerance
+        var x = atLeft ? current.minX : atRight ? current.maxX - size.width : current.midX - size.width / 2
+        var y = atBottom ? current.minY : atTop ? current.maxY - size.height : current.midY - size.height / 2
+        x = min(max(x, area.minX), area.maxX - size.width)
+        y = min(max(y, area.minY), area.maxY - size.height)
+        return NSRect(x: x, y: y, width: size.width, height: size.height)
     }
 
     /// A short resize animation, so that a rotation of the iPhone feels immediate.
@@ -135,14 +151,7 @@ final class MirrorPanel: NSPanel {
 
         let area = current.width * current.height
         let height = (area / ratio).squareRoot()
-        let width = height * ratio
-        let fitted = NSRect(
-            x: current.midX - width / 2,
-            y: current.midY - height / 2,
-            width: width,
-            height: height
-        )
-        setFrame(fitted, display: true, animate: true)
+        setFrame(placed(CGSize(width: height * ratio, height: height)), display: true, animate: true)
         invalidateShadow()
     }
 }

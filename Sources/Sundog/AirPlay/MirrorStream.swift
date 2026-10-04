@@ -54,7 +54,7 @@ final class MirrorStream: @unchecked Sendable {
             case .ready:
                 reported.value = true
                 ready(self.listener.port?.rawValue)
-            case .failed, .cancelled:
+            case .failed, .cancelled, .waiting:
                 reported.value = true
                 ready(nil)
             default:

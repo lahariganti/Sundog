@@ -29,22 +29,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         self.panel = panel
 
         let receiver = AirPlayReceiver(name: "Sundog", sink: panel.mirrorView.videoSink) { [weak self, weak panel] event in
-            Task { @MainActor in
-                guard let panel else { return }
-                switch event {
-                case .connecting:
-                    panel.showMessage(Copy.connecting)
-                case .waiting:
-                    self?.isMirroring = false
-                    panel.showMessage(Copy.waitingForMirroring)
-                case .mirroring:
-                    self?.isMirroring = true
-                    panel.mirrorView.showVideo()
-                case .videoSize(let size):
-                    panel.fit(videoSize: size)
-                case .failed:
-                    self?.isMirroring = false
-                    panel.showMessage(Copy.receiverFailed)
+            // The main queue keeps the events in order. The window depends on that order.
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let panel else { return }
+                    switch event {
+                    case .connecting:
+                        panel.showMessage(Copy.connecting)
+                    case .waiting:
+                        self?.isMirroring = false
+                        panel.showMessage(Copy.waitingForMirroring)
+                    case .mirroring:
+                        self?.isMirroring = true
+                        panel.mirrorView.showVideo()
+                    case .videoSize(let size):
+                        panel.fit(videoSize: size)
+                    case .failed:
+                        self?.isMirroring = false
+                        panel.showMessage(Copy.receiverFailed)
+                    }
                 }
             }
         }
