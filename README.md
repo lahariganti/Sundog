@@ -24,3 +24,5 @@ open build/Sundog.app
 ## License
 
 GPL-3.0. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+The GPL does not cover the Sundog name, the logo, or the icon in `design/` and `Resources/AppIcon.icns`.

@@ -8,6 +8,8 @@
 	<string>Sundog</string>
 	<key>CFBundleExecutable</key>
 	<string>Sundog</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.lahariganti.Sundog</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -24,19 +26,19 @@
 	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Sundog shows the screen of your iPhone when you connect it with a cable. macOS identifies this screen as a camera.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Sundog receives Screen Mirroring from your iPhone on your local network.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_airplay._tcp</string>
 		<string>_raop._tcp</string>
 	</array>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Sundog plays the sound of your iPhone when you connect it with a cable. macOS identifies this sound as a microphone.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Sundog shows the screen of your iPhone when you connect it with a cable. macOS identifies this screen as a camera.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Sundog receives Screen Mirroring from your iPhone on your local network.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sundog plays the sound of your iPhone when you connect it with a cable. macOS identifies this sound as a microphone.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
