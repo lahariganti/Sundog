@@ -14,7 +14,9 @@ Sundog shows your iPhone in a floating window above all other windows, including
 
 ## Build
 
-Requires macOS 14 and the Xcode command line tools.
+Sundog runs on macOS 14 or later.
+
+To build it, install Apple's [Command Line Tools for Xcode](https://developer.apple.com/documentation/xcode/installing-the-command-line-tools) with Swift 6 or later. The full Xcode app also includes these tools.
 
 ```sh
 ./scripts/build-app.sh
