@@ -12,6 +12,7 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/Sundog" "$APP/Contents/MacOS/Sundog"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp LICENSE THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"
 # The official icon is not part of this repository. Set SUNDOG_ICON to an .icns file to include one.
 if [ -n "${SUNDOG_ICON:-}" ]; then
     cp "$SUNDOG_ICON" "$APP/Contents/Resources/AppIcon.icns"

@@ -80,6 +80,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
     }
 
+    @objc func showLicenses(_ sender: Any?) {
+        LicensesWindow.show()
+    }
+
     @objc func showWindow(_ sender: Any?) {
         panel?.orderFrontRegardless()
     }
@@ -110,6 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func makeMainMenu() -> NSMenu {
         let appMenu = NSMenu(title: "Sundog")
         appMenu.addItem(withTitle: "About Sundog", action: #selector(showAbout(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: "Licenses", action: #selector(showLicenses(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Show Window", action: #selector(showWindow(_:)), keyEquivalent: "")
         appMenu.addItem(withTitle: "Stop Mirroring", action: #selector(stopMirroring(_:)), keyEquivalent: ".")
