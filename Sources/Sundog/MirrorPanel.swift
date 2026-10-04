@@ -64,6 +64,11 @@ final class MirrorPanel: NSPanel {
         invalidateShadow()
     }
 
+    /// A short resize animation, so that a rotation of the iPhone feels immediate.
+    override func animationResizeTime(_ newFrame: NSRect) -> TimeInterval {
+        0.15
+    }
+
     /// Changes the window shape to the shape of the iPhone screen. The window keeps its area and its center.
     func fit(videoSize: CGSize) {
         guard videoSize.width > 0, videoSize.height > 0 else { return }

@@ -22,7 +22,6 @@ final class MirrorStream: @unchecked Sendable {
     private let listener: NWListener
     private var connection: NWConnection?
     private var formatDescription: CMVideoFormatDescription?
-    private var videoSize: CGSize?
     private var hasVideo = false
 
     /// The stream calls this on `queue` with the new video size.
@@ -137,11 +136,6 @@ final class MirrorStream: @unchecked Sendable {
             let dimensions = CMVideoFormatDescriptionGetPresentationDimensions(
                 description, usePixelAspectRatio: true, useCleanAperture: true)
             Self.logger.notice("Video format: \(isHEVC ? "H.265" : "H.264", privacy: .public) \(Int(dimensions.width)) x \(Int(dimensions.height))")
-            // A new size, for example after a rotation, needs a new decoder setup.
-            if let videoSize, videoSize != dimensions {
-                sink.reset()
-            }
-            videoSize = dimensions
             onVideoSize?(dimensions)
         default:
             break

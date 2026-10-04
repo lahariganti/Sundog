@@ -14,6 +14,9 @@ final class MirrorView: NSView {
     private let messageLabel = NSTextField(wrappingLabelWithString: "")
     private let brandView = NSImageView()
     private let messageSpace = NSLayoutGuide()
+    /// The layout of the picture and the instruction. It is active only on the waiting screen:
+    /// the picture is as tall as it is wide, which a landscape video window cannot satisfy.
+    private var brandConstraints: [NSLayoutConstraint] = []
     private let brandImage = Bundle.main.image(forResource: "Brand")
     let videoSink: VideoSink
     var onHoverChange: ((Bool) -> Void)?
@@ -52,7 +55,7 @@ final class MirrorView: NSView {
                 brandView.setContentHuggingPriority(.defaultLow, for: orientation)
             }
             addSubview(brandView)
-            NSLayoutConstraint.activate([
+            brandConstraints = [
                 brandView.bottomAnchor.constraint(equalTo: bottomAnchor),
                 brandView.leadingAnchor.constraint(equalTo: leadingAnchor),
                 brandView.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -61,7 +64,8 @@ final class MirrorView: NSView {
                 messageSpace.topAnchor.constraint(equalTo: topAnchor, constant: 28),
                 messageSpace.bottomAnchor.constraint(equalTo: brandView.topAnchor),
                 messageLabel.centerYAnchor.constraint(equalTo: messageSpace.centerYAnchor),
-            ])
+            ]
+            NSLayoutConstraint.activate(brandConstraints)
         } else {
             messageLabel.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
         }
@@ -110,6 +114,7 @@ final class MirrorView: NSView {
         messageLabel.stringValue = text
         messageLabel.isHidden = false
         brandView.isHidden = brandImage == nil
+        NSLayoutConstraint.activate(brandConstraints)
         displayLayer.isHidden = true
         layer?.backgroundColor = (brandImage == nil ? NSColor.black : Self.brandBackground).cgColor
     }
@@ -118,6 +123,7 @@ final class MirrorView: NSView {
         fade()
         messageLabel.isHidden = true
         brandView.isHidden = true
+        NSLayoutConstraint.deactivate(brandConstraints)
         displayLayer.isHidden = false
         layer?.backgroundColor = NSColor.black.cgColor
     }
