@@ -12,7 +12,10 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/Sundog" "$APP/Contents/MacOS/Sundog"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
-cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+# The official icon is not part of this repository. Set SUNDOG_ICON to an .icns file to include one.
+if [ -n "${SUNDOG_ICON:-}" ]; then
+    cp "$SUNDOG_ICON" "$APP/Contents/Resources/AppIcon.icns"
+fi
 
 codesign --force --sign - "$APP"
 echo "Built $APP"

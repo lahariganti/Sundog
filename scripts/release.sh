@@ -10,6 +10,7 @@
 # Environment:
 #   SUNDOG_SIGN_IDENTITY   The signing identity. Default: "Developer ID Application".
 #   SUNDOG_NOTARY_PROFILE  The notarytool keychain profile. Default: "sundog-notary".
+#   SUNDOG_ICON            An .icns file for the app icon. Without it, macOS shows the default icon.
 #
 # Use --skip-notarize to test the packaging without notarization.
 set -eu
@@ -35,7 +36,10 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/Sundog" "$APP/Contents/MacOS/Sundog"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
-cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+# The official icon is not part of this repository. Set SUNDOG_ICON to an .icns file to include one.
+if [ -n "${SUNDOG_ICON:-}" ]; then
+    cp "$SUNDOG_ICON" "$APP/Contents/Resources/AppIcon.icns"
+fi
 
 # 2. Sign the app with the hardened runtime and a secure timestamp.
 codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
