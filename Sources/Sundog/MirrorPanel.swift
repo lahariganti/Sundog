@@ -28,7 +28,6 @@ final class MirrorPanel: NSPanel {
         isReleasedWhenClosed = false
         isMovableByWindowBackground = true
         backgroundColor = .black
-        minSize = NSSize(width: 120, height: 120)
 
         contentView = mirrorView
 
@@ -44,12 +43,16 @@ final class MirrorPanel: NSPanel {
         }
     }
 
-    /// Changes the window shape to the shape of the iPhone screen. The window keeps its area and its center.
-    /// Shows an instruction and resizes the window to the compact waiting size, around its center.
+    /// The waiting screen has the shape of a standard 6.1-inch iPhone in portrait (1179 x 2556 pixels).
+    private static let waitingSize = CGSize(width: 300, height: 650)
+
+    /// Shows an instruction and resizes the window to the waiting size, around its center.
     func showMessage(_ text: String) {
         mirrorView.showMessage(text)
-        let size = mirrorView.messageSize
+        let size = Self.waitingSize
         contentAspectRatio = size
+        // The instruction must fit in three lines.
+        contentMinSize = NSSize(width: 240, height: 520)
         let current = frame
         let target = NSRect(
             x: current.midX - size.width / 2,
@@ -58,12 +61,19 @@ final class MirrorPanel: NSPanel {
             height: size.height
         )
         setFrame(constrainFrameRect(target, to: screen), display: true, animate: isVisible)
+        invalidateShadow()
     }
 
+    /// Changes the window shape to the shape of the iPhone screen. The window keeps its area and its center.
     func fit(videoSize: CGSize) {
         guard videoSize.width > 0, videoSize.height > 0 else { return }
         let ratio = videoSize.width / videoSize.height
         contentAspectRatio = videoSize
+        // The short side stays at least 160 points, so that the iPhone screen stays readable.
+        let shortSide: CGFloat = 160
+        contentMinSize = ratio < 1
+            ? NSSize(width: shortSide, height: shortSide / ratio)
+            : NSSize(width: shortSide * ratio, height: shortSide)
 
         let current = frame
         let currentRatio = current.width / current.height
@@ -79,5 +89,6 @@ final class MirrorPanel: NSPanel {
             height: height
         )
         setFrame(fitted, display: true, animate: true)
+        invalidateShadow()
     }
 }

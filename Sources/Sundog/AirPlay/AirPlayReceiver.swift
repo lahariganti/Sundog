@@ -6,6 +6,7 @@ import dnssd
 final class AirPlayReceiver: @unchecked Sendable {
     enum Event: Sendable {
         case waiting
+        case connecting
         case mirroring
         case videoSize(CGSize)
         case failed
@@ -85,6 +86,8 @@ final class AirPlayReceiver: @unchecked Sendable {
 
     private func sessionEvent(_ event: AirPlaySession.Event, from id: ObjectIdentifier) {
         switch event {
+        case .connecting:
+            if mirroringSession == nil { onEvent(.connecting) }
         case .mirroringStarted:
             // A new iPhone replaces the current one.
             if let current = mirroringSession, current != id {

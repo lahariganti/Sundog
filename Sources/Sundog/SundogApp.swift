@@ -30,6 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             Task { @MainActor in
                 guard let panel else { return }
                 switch event {
+                case .connecting:
+                    panel.showMessage(Copy.connecting)
                 case .waiting:
                     self?.isMirroring = false
                     panel.showMessage(Copy.waitingForMirroring)
@@ -81,5 +83,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
 enum Copy {
     static let starting = "Starting…"
     static let waitingForMirroring = "On your iPhone, open Control Center.\nTap Screen Mirroring.\nSelect Sundog."
+    static let connecting = "Connecting…"
     static let receiverFailed = "Sundog cannot receive Screen Mirroring.\n\nMake sure that Wi-Fi is on.\nQuit Sundog.\nOpen Sundog again."
 }

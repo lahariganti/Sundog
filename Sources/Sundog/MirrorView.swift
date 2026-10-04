@@ -105,13 +105,8 @@ final class MirrorView: NSView {
         CATransaction.commit()
     }
 
-    /// The window size for the waiting screen: the proportions of an iPhone in portrait (about 9 : 19.5),
-    /// so the window does not change shape when a portrait iPhone starts to mirror.
-    var messageSize: CGSize {
-        CGSize(width: 300, height: 650)
-    }
-
     func showMessage(_ text: String) {
+        fade()
         messageLabel.stringValue = text
         messageLabel.isHidden = false
         brandView.isHidden = brandImage == nil
@@ -120,9 +115,17 @@ final class MirrorView: NSView {
     }
 
     func showVideo() {
+        fade()
         messageLabel.isHidden = true
         brandView.isHidden = true
         displayLayer.isHidden = false
         layer?.backgroundColor = NSColor.black.cgColor
+    }
+
+    private func fade() {
+        let transition = CATransition()
+        transition.type = .fade
+        transition.duration = 0.25
+        layer?.add(transition, forKey: "fade")
     }
 }

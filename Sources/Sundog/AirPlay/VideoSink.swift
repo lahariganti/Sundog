@@ -17,6 +17,11 @@ final class VideoSink: @unchecked Sendable {
         renderer.enqueue(sample)
     }
 
+    /// Resets the decoder but keeps the last picture. Use it when the video size changes.
+    func reset() {
+        renderer.flush()
+    }
+
     func clear() {
         renderer.flush(removingDisplayedImage: true, completionHandler: nil)
     }

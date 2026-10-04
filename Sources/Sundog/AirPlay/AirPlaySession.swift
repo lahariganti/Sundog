@@ -17,6 +17,7 @@ import Network
 /// Only `queue` reads and writes the state.
 final class AirPlaySession: @unchecked Sendable {
     enum Event {
+        case connecting
         case mirroringStarted
         case videoSize(CGSize)
         case mirroringEnded
@@ -320,6 +321,7 @@ final class AirPlaySession: @unchecked Sendable {
                 self.mirror = mirror
                 mirror.onVideoSize = { [weak self] size in self?.onEvent(.videoSize(size)) }
                 mirror.onFirstFrame = { [weak self] in self?.onEvent(.mirroringStarted) }
+                onEvent(.connecting)
                 mirror.onEnd = { [weak self] in self?.endMirroring() }
                 group.enter()
                 mirror.start { port in
