@@ -2,10 +2,19 @@ import AVFoundation
 import AppKit
 
 /// Shows the iPhone screen. When no iPhone sends Screen Mirroring, it shows a short instruction.
+///
+/// The official build adds a brand picture (`Brand.png` in the app resources). The view then shows
+/// the picture above the instruction, on the picture's background color. Without the picture, the
+/// instruction shows alone on black.
 @MainActor
 final class MirrorView: NSView {
+    private static let brandBackground = NSColor(srgbRed: 0x1F / 255, green: 0x3F / 255, blue: 0xAE / 255, alpha: 1)
+
     private let displayLayer = AVSampleBufferDisplayLayer()
     private let messageLabel = NSTextField(wrappingLabelWithString: "")
+    private let brandView = NSImageView()
+    private let messageSpace = NSLayoutGuide()
+    private let brandImage = Bundle.main.image(forResource: "Brand")
     let videoSink: VideoSink
     var onHoverChange: ((Bool) -> Void)?
 
@@ -26,10 +35,36 @@ final class MirrorView: NSView {
         addSubview(messageLabel)
         NSLayoutConstraint.activate([
             messageLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-            messageLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
             messageLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 20),
             messageLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -20),
         ])
+
+        if let brandImage {
+            // The instruction is at the top. The picture fills the full width at the bottom, so that
+            // the coat continues past the bottom edge of the window.
+            brandView.image = brandImage
+            brandView.imageScaling = .scaleProportionallyUpOrDown
+            brandView.translatesAutoresizingMaskIntoConstraints = false
+            addLayoutGuide(messageSpace)
+            // The picture follows the window size. Without this, its pixel size forces the window to grow.
+            for orientation in [NSLayoutConstraint.Orientation.horizontal, .vertical] {
+                brandView.setContentCompressionResistancePriority(.defaultLow, for: orientation)
+                brandView.setContentHuggingPriority(.defaultLow, for: orientation)
+            }
+            addSubview(brandView)
+            NSLayoutConstraint.activate([
+                brandView.bottomAnchor.constraint(equalTo: bottomAnchor),
+                brandView.leadingAnchor.constraint(equalTo: leadingAnchor),
+                brandView.trailingAnchor.constraint(equalTo: trailingAnchor),
+                brandView.heightAnchor.constraint(equalTo: brandView.widthAnchor),
+                // Center the instruction in the space above the picture.
+                messageSpace.topAnchor.constraint(equalTo: topAnchor, constant: 28),
+                messageSpace.bottomAnchor.constraint(equalTo: brandView.topAnchor),
+                messageLabel.centerYAnchor.constraint(equalTo: messageSpace.centerYAnchor),
+            ])
+        } else {
+            messageLabel.centerYAnchor.constraint(equalTo: centerYAnchor).isActive = true
+        }
 
         let contextMenu = NSMenu()
         contextMenu.addItem(withTitle: "Stop Mirroring", action: #selector(AppDelegate.stopMirroring(_:)), keyEquivalent: "")
@@ -70,14 +105,24 @@ final class MirrorView: NSView {
         CATransaction.commit()
     }
 
+    /// The window size for the waiting screen: the proportions of an iPhone in portrait (about 9 : 19.5),
+    /// so the window does not change shape when a portrait iPhone starts to mirror.
+    var messageSize: CGSize {
+        CGSize(width: 300, height: 650)
+    }
+
     func showMessage(_ text: String) {
         messageLabel.stringValue = text
         messageLabel.isHidden = false
+        brandView.isHidden = brandImage == nil
         displayLayer.isHidden = true
+        layer?.backgroundColor = (brandImage == nil ? NSColor.black : Self.brandBackground).cgColor
     }
 
     func showVideo() {
         messageLabel.isHidden = true
+        brandView.isHidden = true
         displayLayer.isHidden = false
+        layer?.backgroundColor = NSColor.black.cgColor
     }
 }

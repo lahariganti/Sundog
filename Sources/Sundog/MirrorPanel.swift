@@ -45,6 +45,21 @@ final class MirrorPanel: NSPanel {
     }
 
     /// Changes the window shape to the shape of the iPhone screen. The window keeps its area and its center.
+    /// Shows an instruction and resizes the window to the compact waiting size, around its center.
+    func showMessage(_ text: String) {
+        mirrorView.showMessage(text)
+        let size = mirrorView.messageSize
+        contentAspectRatio = size
+        let current = frame
+        let target = NSRect(
+            x: current.midX - size.width / 2,
+            y: current.midY - size.height / 2,
+            width: size.width,
+            height: size.height
+        )
+        setFrame(constrainFrameRect(target, to: screen), display: true, animate: isVisible)
+    }
+
     func fit(videoSize: CGSize) {
         guard videoSize.width > 0, videoSize.height > 0 else { return }
         let ratio = videoSize.width / videoSize.height

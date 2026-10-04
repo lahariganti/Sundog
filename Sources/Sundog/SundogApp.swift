@@ -22,7 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         NSApp.mainMenu = makeMainMenu()
 
         let panel = MirrorPanel()
-        panel.mirrorView.showMessage(Copy.starting)
+        panel.showMessage(Copy.starting)
         panel.orderFrontRegardless()
         self.panel = panel
 
@@ -32,7 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 switch event {
                 case .waiting:
                     self?.isMirroring = false
-                    panel.mirrorView.showMessage(Copy.waitingForMirroring)
+                    panel.showMessage(Copy.waitingForMirroring)
                 case .mirroring:
                     self?.isMirroring = true
                     panel.mirrorView.showVideo()
@@ -40,7 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                     panel.fit(videoSize: size)
                 case .failed:
                     self?.isMirroring = false
-                    panel.mirrorView.showMessage(Copy.receiverFailed)
+                    panel.showMessage(Copy.receiverFailed)
                 }
             }
         }

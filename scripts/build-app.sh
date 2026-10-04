@@ -16,6 +16,10 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 if [ -n "${SUNDOG_ICON:-}" ]; then
     cp "$SUNDOG_ICON" "$APP/Contents/Resources/AppIcon.icns"
 fi
+# The official brand picture for the waiting screen. Set SUNDOG_BRAND_IMAGE to a PNG file to include one.
+if [ -n "${SUNDOG_BRAND_IMAGE:-}" ]; then
+    cp "$SUNDOG_BRAND_IMAGE" "$APP/Contents/Resources/Brand.png"
+fi
 
 codesign --force --sign - "$APP"
 echo "Built $APP"
