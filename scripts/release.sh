@@ -34,7 +34,11 @@ APP=build/Sundog.app
 ARCHIVE="build/Sundog-$VERSION.zip"
 
 # 1. Build a universal binary and the app bundle.
-swift build -c release --arch arm64 --arch x86_64
+# Pass the SDK to the Clang linker so macOS uses the current native controls.
+SDK=$(xcrun --sdk macosx --show-sdk-path)
+swift build -c release --arch arm64 --arch x86_64 --sdk "$SDK" \
+    -Xswiftc -Xclang-linker -Xswiftc -isysroot \
+    -Xswiftc -Xclang-linker -Xswiftc "$SDK"
 BIN_DIR=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"

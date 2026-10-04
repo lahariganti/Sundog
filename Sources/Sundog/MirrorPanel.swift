@@ -15,9 +15,15 @@ final class MirrorPanel: NSPanel {
         )
         titleVisibility = .hidden
         titlebarAppearsTransparent = true
-        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
-            standardWindowButton(button)?.isHidden = true
-        }
+        standardWindowButton(.zoomButton)?.isHidden = true
+        let closeButton = standardWindowButton(.closeButton)
+        closeButton?.target = NSApp
+        closeButton?.action = #selector(NSApplication.terminate(_:))
+        closeButton?.toolTip = "Quit Sundog"
+        let hideButton = standardWindowButton(.miniaturizeButton)
+        hideButton?.target = NSApp.delegate
+        hideButton?.action = #selector(AppDelegate.toggleWindow(_:))
+        hideButton?.toolTip = "Hide Window (Control-Option-Command-S)"
         showWindowButtons(false)
         mirrorView.onHoverChange = { [weak self] isInside in
             self?.showWindowButtons(isInside)
@@ -89,7 +95,9 @@ final class MirrorPanel: NSPanel {
     /// Shows the close and minimize buttons only while the pointer is over the window.
     /// At all other times, the audience sees no buttons.
     private func showWindowButtons(_ visible: Bool) {
-        mirrorView.showWindowButtons(visible)
+        for type in [NSWindow.ButtonType.closeButton, .miniaturizeButton] {
+            standardWindowButton(type)?.animator().alphaValue = visible ? 1 : 0
+        }
     }
 
     /// The waiting screen has the shape of a standard 6.1-inch iPhone in portrait (1179 x 2556 pixels).

@@ -4,7 +4,11 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-swift build -c release
+# Pass the SDK to the Clang linker so macOS uses the current native controls.
+SDK=$(xcrun --sdk macosx --show-sdk-path)
+swift build -c release --sdk "$SDK" \
+    -Xswiftc -Xclang-linker -Xswiftc -isysroot \
+    -Xswiftc -Xclang-linker -Xswiftc "$SDK"
 BIN_DIR=$(swift build -c release --show-bin-path)
 
 APP=build/Sundog.app
