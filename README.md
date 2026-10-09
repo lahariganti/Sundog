@@ -1,8 +1,17 @@
 # Sundog
 
-Demo your iPhone on your Mac.
+Sundog is a macOS app for wireless iPhone screen mirroring through AirPlay.
 
 Sundog shows your iPhone in a floating window above all other windows, including full-screen slides.
+
+Sundog works in the EU. It does not require Apple's iPhone Mirroring app.
+It only shows the iPhone screen. You control the iPhone by hand.
+You install Sundog on the Mac. No iPhone app is required.
+
+[Get Sundog for €4.99 once](https://getsundog.eu/) · [Watch the demo](https://getsundog.eu/demo)
+
+The purchase provides the Mac app as a ZIP download. There is no subscription.
+The source code is available here under GPL-3.0.
 
 ## Use
 
