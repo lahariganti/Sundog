@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: macos-latest
@@ -12,5 +15,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check repository
         run: bash scripts/check-repo.sh
-      - name: Build
-        run: swift build
+      - name: Test debug
+        run: swift test
+      - name: Test release
+        run: swift test -c release
+      - name: Package app
+        run: bash scripts/build-app.sh
+      - name: Archive app
+        run: ditto -c -k --sequesterRsrc --keepParent build/Sundog.app build/Sundog-test.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sundog-macOS-test
+          path: build/Sundog-test.zip

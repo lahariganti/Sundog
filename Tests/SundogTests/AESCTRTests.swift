@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import Testing
 @testable import Sundog
 
@@ -26,6 +27,32 @@ struct AESCTRTests {
             output.append(chunk)
         }
         #expect(output == cipherText)
+    }
+
+    @Test(arguments: [false, true])
+    func variableSizedVideoFramesMatchIndependentVector(inPlace: Bool) throws {
+        // Expected digest generated independently with OpenSSL-backed Python cryptography.
+        // Exercise a large first frame, short deltas, buffer reuse, and growth.
+        let sizes = [65_537, 17, 1, 16_382, 33, 2, 4_095, 45_040]
+        let plain = Data((0..<sizes.reduce(0, +)).map { UInt8(($0 * 31 + 7) & 255) })
+        let cipher = try #require(AESCTR(key: key, iv: iv))
+        var result = Data()
+        var offset = 0
+        for size in sizes {
+            let chunk = plain.subdata(in: offset..<offset + size)
+            var output = inPlace ? chunk : Data(count: size)
+            if inPlace {
+                cipher.apply(to: &output)
+            } else {
+                chunk.withUnsafeBytes { source in
+                    output.withUnsafeMutableBytes { cipher.apply(from: source, to: $0) }
+                }
+            }
+            result.append(output)
+            offset += size
+        }
+        let digest = SHA256.hash(data: result).map { String(format: "%02x", $0) }.joined()
+        #expect(digest == "43eb65336cfee590cba698dece83d0fe1374f88f966626c08e453e8324f3c21c")
     }
 }
 
